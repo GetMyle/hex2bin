@@ -6,7 +6,7 @@
 //  Copyright © 2016 Mikalai Silivonik. All rights reserved.
 //
 
-#import <Foundation/Foundation.h>
+#include <sys/stat.h>
 
 
 /**********************************************************************
@@ -76,8 +76,12 @@ typedef struct __attribute__((packed)) {
     int8_t minor;
     int8_t patch;
     int8_t imageType;
-    int16_t startAddress;
-    int16_t length;
+    int8_t startAddress1;
+    int8_t startAddress2;
+    int8_t startAddress3;
+    int8_t length1;
+    int8_t length2;
+    int8_t length3;
 } ImageMetadata;
 
 
@@ -86,7 +90,8 @@ typedef struct __attribute__((packed)) {
 void print_mem(void const *vp, size_t n)
 {
     unsigned char const *p = vp;
-    for (size_t i=0; i<n; i++) {
+    size_t i;
+    for (i=0; i<n; i++) {
         printf("%02x", p[i]);
     }
 };
@@ -130,107 +135,6 @@ int8_t F_ConvertArrayFromAsciiToNumeric(int8_t A_Data[], int VF_DataSize, int8_t
 }
 
 
-
-
-uint8_t hex2bin(int argc, char const* *argv)
-{
-    
-    uint8_t VF_ArrayPos = 0;
-    int8_t *S_HexFile = 0;
-    int8_t *S_BinFile = 0;
-    int8_t VP_argbPos = 0;
-    uint32_t VP_MemoryInitAddress = 0;
-    uint32_t VP_MemorySize = C_BinaryFileSize*1024;
-    uint8_t VP_FillPathern = 0xFF;
-    uint8_t VP_EndianessBits = 0;
-    
-    if ( argc <= 1 )
-    {
-        
-        fprintf (stderr,
-                 "\n"
-                 "Usage: hex2bin.exe filename.hex filename.bin [OPTIONS] \n"
-                 "Example: hex2bin.exe myhex.hex mybin.bin /A:1FF /F:FF /S:256 \n"
-                 "Options:\n"
-                 "  /S [Size]  Size in kB of the .bin file, decimal value. Default value: 128\n"
-                 "  /F [Fill]  Fill pattern. Default value FF\n"
-                 "  /A [start Address] Starting Address of the memory, hexadecimal value. Default value 0\n"
-                 "  /L [Little Endian] If the data in the hex file is written in little endian you should include this parameter "
-                 "with the number of bits of each register. For example /L:16 (little endian with 16bit register). "
-                 "default parameter is big endian, in big endian the size of the register is not necessary. \n\n"
-                 "Return values: \n"
-                 "OK = 1 \n"
-                 "End of file record not found in .hex file = 0 \n"
-                 "File not found = -1 \n"
-                 "Checksum Error = -2 \n"
-                 "Incompatible File = -3 \n"
-                 "Memory Allocation = -4 \n"
-                 "Endianness Bits must be 8 multiple = -5 \n"
-                 );
-        
-        
-        
-        return 0;
-    }
-    //getchar();
-    S_HexFile = (int8_t *) malloc ((strlen(argv[0]) + strlen(argv[1])) * sizeof (int8_t));
-    S_BinFile = (int8_t *) malloc ((strlen(argv[0]) + strlen(argv[2]) + 20) * sizeof (int8_t));
-    strcpy((char*)S_HexFile, argv[0]);
-    strcpy((char*)S_BinFile, argv[0]);
-    
-    VF_ArrayPos = strlen((const char*)S_HexFile);
-    while ( VF_ArrayPos > 0 )
-    {
-        if (S_HexFile[VF_ArrayPos] == '\\')
-        {
-            break;
-        }
-        VF_ArrayPos--;
-    }
-    if ( VF_ArrayPos != 0)
-    {
-        VF_ArrayPos++;
-    }
-    
-    strcpy((char*)&S_HexFile[VF_ArrayPos], argv[1]);
-    strcpy((char*)&S_BinFile[VF_ArrayPos], argv[2]);
-    
-    for (VP_argbPos = 3; VP_argbPos < argc; VP_argbPos++)
-    {
-        if (argv[VP_argbPos][1] == 'A' && argv[VP_argbPos][2] == ':')
-        {
-            for ( VF_ArrayPos = 0; VF_ArrayPos <  strlen(&argv[VP_argbPos][3]); VF_ArrayPos++)
-            {
-                VP_MemoryInitAddress = (VP_MemoryInitAddress << 4) + F_ConvertAsciiToNumeric(argv[VP_argbPos][VF_ArrayPos + 3]);
-            }
-        }
-        if (argv[VP_argbPos][1] == 'S' && argv[VP_argbPos][2] == ':')
-        {
-            VP_MemorySize = atoi(&argv[VP_argbPos][3]) * 1024;
-        }
-        
-        if (argv[VP_argbPos][1] == 'F' && argv[VP_argbPos][2] == ':')
-        {
-            VP_FillPathern  = 0;
-            for ( VF_ArrayPos = 0; VF_ArrayPos < 2; VF_ArrayPos++)
-            {
-                VP_FillPathern = (VP_FillPathern << 4) + F_ConvertAsciiToNumeric(argv[VP_argbPos][VF_ArrayPos + 3]);
-            }
-        }
-        
-        if (argv[VP_argbPos][1] == 'L' && argv[VP_argbPos][2] == ':')
-        {
-            VP_EndianessBits = atoi(&argv[VP_argbPos][3]);
-        }
-    }
-    
-    int8_t result = F_TransformHexIntelFileToBin(S_HexFile, VP_MemorySize, S_BinFile, VP_FillPathern, VP_MemoryInitAddress, VP_EndianessBits);
-    
-    free(S_HexFile);
-    free(S_BinFile);
-    
-    return result;
-}
 
 
 uint8_t F_TranformArrayFromLittleEndianToBigEndian(uint8_t VF_EndianessBits, uint8_t VF_ArraySize, uint8_t AF_LittleEndian[], uint8_t AF_BigEndian[])
@@ -598,13 +502,11 @@ uint16_t crc16(uint16_t crc, uint8_t val)
 }
 
 
-ImageMetadata calcmeta(int argc, const char * argv[]) {
+ImageMetadata calcmeta(const char *S_BinFile) {
     long int startAddress = 0x1000;
     
     // open binary file
-    int8_t *binFileName = (int8_t *) malloc ((strlen(argv[0]) + strlen(argv[2]) + 20) * sizeof (int8_t));
-    strcpy((char*)binFileName, argv[0]);
-    FILE *fp = fopen((const char *)binFileName, "rb");
+    FILE *fp = fopen(S_BinFile, "rb");
     //FILE *fp = fopen("/Users/mikalai/Downloads/CC2640_AppStack-1.hex.bin", "rb");
     
     // obtain file size:
@@ -616,13 +518,15 @@ ImageMetadata calcmeta(int argc, const char * argv[]) {
     int8_t *bin = malloc(sizeof(int8_t) * binFileSize);
     if (fread (bin, 1, binFileSize, fp) != binFileSize)
     {
-        fputs ("Error rading binary file\r\n", stderr);
+        fputs ("Error reading binary file\r\n", stderr);
         exit (3);
     }
     
+    long int i;
+    
     // calculate end address
     long int endAddress = binFileSize - 1;
-    for (long int i = endAddress; i >= 0; i --)
+    for (i = endAddress; i >= 0; i --)
     {
         if (bin[i] != (char)0xFF)
         {
@@ -632,7 +536,8 @@ ImageMetadata calcmeta(int argc, const char * argv[]) {
     }
     
     // round up end address so result length is multiple of 4
-    for (long int i = endAddress; i < binFileSize; i ++)
+    
+    for (i = endAddress; i < binFileSize; i ++)
     {
         if ((i & 0xF) == 0x3 ||
             (i & 0xF) == 0x7 ||
@@ -646,21 +551,26 @@ ImageMetadata calcmeta(int argc, const char * argv[]) {
     
     // calculate crc
     uint16_t crc = 0;
-    for (long int i = startAddress; i <= endAddress; i ++) {
+    for (i = startAddress; i <= endAddress; i ++) {
         crc = crc16(crc, bin[i]);
     }
     crc = crc16(crc, 0);
     crc = crc16(crc, 0);
     
     // create metadata structure
+    long int length = (endAddress - startAddress + 1);
     ImageMetadata metadata = {0};
     metadata.crc = crc;
     metadata.major = 0x01;
     metadata.minor = 0x02;
     metadata.patch = 0x03;
     metadata.imageType = 0x01;
-    metadata.startAddress = startAddress >> 2;
-    metadata.length = (endAddress - startAddress + 1) >> 2;
+    metadata.startAddress1 = startAddress & 0xFF;
+    metadata.startAddress2 = startAddress >> 8 & 0xFF;
+    metadata.startAddress3 = startAddress >> 16 & 0xFF;
+    metadata.length1 = length & 0xFF;
+    metadata.length2 = length >> 8 & 0xFF;
+    metadata.length3 = length >> 16 & 0xFF;
     
     free(bin);
     fclose(fp);
@@ -671,20 +581,116 @@ ImageMetadata calcmeta(int argc, const char * argv[]) {
 
 
 int main(int argc, const char * argv[]) {
-    // convert HEX to Bin
-    uint8_t result = hex2bin(argc, argv);
+    uint8_t VF_ArrayPos = 0;
+    int8_t *S_HexFile = 0;
+    int8_t *S_BinFile = 0;
+    int8_t VP_argbPos = 0;
+    uint32_t VP_MemoryInitAddress = 0;
+    uint32_t VP_MemorySize = C_BinaryFileSize*1024;
+    uint8_t VP_FillPathern = 0xFF;
+    uint8_t VP_EndianessBits = 0;
+    
+    if ( argc <= 1 )
+    {
+        
+        fprintf (stderr,
+                 "\n"
+                 "Usage: hex2bin.exe filename.hex filename.bin [OPTIONS] \n"
+                 "Example: hex2bin.exe myhex.hex mybin.bin /A:1FF /F:FF /S:256 \n"
+                 "Options:\n"
+                 "  /S [Size]  Size in kB of the .bin file, decimal value. Default value: 128\n"
+                 "  /F [Fill]  Fill pattern. Default value FF\n"
+                 "  /A [start Address] Starting Address of the memory, hexadecimal value. Default value 0\n"
+                 "  /L [Little Endian] If the data in the hex file is written in little endian you should include this parameter "
+                 "with the number of bits of each register. For example /L:16 (little endian with 16bit register). "
+                 "default parameter is big endian, in big endian the size of the register is not necessary. \n\n"
+                 "Return values: \n"
+                 "OK = 1 \n"
+                 "End of file record not found in .hex file = 0 \n"
+                 "File not found = -1 \n"
+                 "Checksum Error = -2 \n"
+                 "Incompatible File = -3 \n"
+                 "Memory Allocation = -4 \n"
+                 "Endianness Bits must be 8 multiple = -5 \n"
+                 );
+        
+        
+        
+        return 0;
+    }
+    //getchar();
+    S_HexFile = (int8_t *) malloc ((strlen(argv[0]) + strlen(argv[1])) * sizeof (int8_t));
+    S_BinFile = (int8_t *) malloc ((strlen(argv[0]) + strlen(argv[2]) + 20) * sizeof (int8_t));
+    strcpy((char*)S_HexFile, argv[0]);
+    strcpy((char*)S_BinFile, argv[0]);
+    
+    VF_ArrayPos = strlen((const char*)S_HexFile);
+    while ( VF_ArrayPos > 0 )
+    {
+        if (S_HexFile[VF_ArrayPos] == '\\')
+        {
+            break;
+        }
+        VF_ArrayPos--;
+    }
+    if ( VF_ArrayPos != 0)
+    {
+        VF_ArrayPos++;
+    }
+    
+    strcpy((char*)&S_HexFile[VF_ArrayPos], argv[1]);
+    strcpy((char*)&S_BinFile[VF_ArrayPos], argv[2]);
+    
+    for (VP_argbPos = 3; VP_argbPos < argc; VP_argbPos++)
+    {
+        if (argv[VP_argbPos][1] == 'A' && argv[VP_argbPos][2] == ':')
+        {
+            for ( VF_ArrayPos = 0; VF_ArrayPos <  strlen(&argv[VP_argbPos][3]); VF_ArrayPos++)
+            {
+                VP_MemoryInitAddress = (VP_MemoryInitAddress << 4) + F_ConvertAsciiToNumeric(argv[VP_argbPos][VF_ArrayPos + 3]);
+            }
+        }
+        if (argv[VP_argbPos][1] == 'S' && argv[VP_argbPos][2] == ':')
+        {
+            VP_MemorySize = atoi(&argv[VP_argbPos][3]) * 1024;
+        }
+        
+        if (argv[VP_argbPos][1] == 'F' && argv[VP_argbPos][2] == ':')
+        {
+            VP_FillPathern  = 0;
+            for ( VF_ArrayPos = 0; VF_ArrayPos < 2; VF_ArrayPos++)
+            {
+                VP_FillPathern = (VP_FillPathern << 4) + F_ConvertAsciiToNumeric(argv[VP_argbPos][VF_ArrayPos + 3]);
+            }
+        }
+        
+        if (argv[VP_argbPos][1] == 'L' && argv[VP_argbPos][2] == ':')
+        {
+            VP_EndianessBits = atoi(&argv[VP_argbPos][3]);
+        }
+    }
+    
+    int8_t result = F_TransformHexIntelFileToBin(S_HexFile, VP_MemorySize, S_BinFile, VP_FillPathern, VP_MemoryInitAddress, VP_EndianessBits);
+    
+
+    
+    
     if (result != E_OK) {
         printf("Result: %d\r\n", result);
+        free(S_HexFile);
+        free(S_BinFile);
         return 1;
     }
     
-    printf("Generated binary image\r\n");
+    //printf("Generated binary image\r\n");
     
     // calculate metadata
-    ImageMetadata metadata = calcmeta(argc, argv);
-    printf("Image metadata raw: ");
+    ImageMetadata metadata = calcmeta((const char *)S_BinFile);
     PRINT_OPAQUE_STRUCT(&metadata);
-    printf("\r\nImage metadata fields:\r\n\tCRC: 0x%02x\r\n\tMajor: 0x%02x\r\n\tMinor: 0x%02x\r\n\tPatch: 0x%02x\r\n\tImage Type: 0x%02x\r\n\tStart Addess: 0x%02x\r\n\tLength: 0x%02x\r\n", metadata.crc, metadata.major, metadata.minor, metadata.patch, metadata.imageType, metadata.startAddress, metadata.length);
-    
+    printf("\r\n");
+   //printf("Image metadata: %02x %02x%02x%02x %02x %02x%02x%02x %02x%02x%02x\r\n", metadata.crc, metadata.major, metadata.minor, metadata.patch, metadata.imageType, metadata.startAddress1, metadata.startAddress2, metadata.startAddress3, metadata.length1, metadata.length2, metadata.length3);
+    free(S_HexFile);
+    free(S_BinFile);
     return 0;
 }
+
