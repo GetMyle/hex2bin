@@ -526,7 +526,7 @@ ImageMetadata calcmeta(const char *S_BinFile) {
     
     // calculate end address
     long int endAddress = binFileSize - 1;
-    for (i = endAddress; i >= 0; i --)
+    for(i = endAddress; i >= startAddress; i--)
     {
         if (bin[i] != (char)0xFF)
         {
@@ -536,18 +536,7 @@ ImageMetadata calcmeta(const char *S_BinFile) {
     }
     
     // round up end address so result length is multiple of 4
-    
-    for (i = endAddress; i < binFileSize; i ++)
-    {
-        if ((i & 0xF) == 0x3 ||
-            (i & 0xF) == 0x7 ||
-            (i & 0xF) == 0xB ||
-            (i & 0xF) == 0xF)
-        {
-            endAddress = i;
-            break;
-        }
-    }
+    endAddress |= 0x3;
     
     // calculate crc
     uint16_t crc = 0;
