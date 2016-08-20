@@ -27,3 +27,5 @@ xcuserdata
 Pods/
 *.xcworkspace
 Podfile.lock
+.browse.VC.db
+.browse.VC.db-wal

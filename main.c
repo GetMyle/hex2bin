@@ -161,7 +161,7 @@ uint8_t F_TranformArrayFromLittleEndianToBigEndian(uint8_t VF_EndianessBits, uin
         AF_BigEndian[VF_ArrayPos] = AF_BigEndianTmp[VF_ArrayPos];
     }
     free(AF_BigEndianTmp);
-    
+
     return E_OK;
 }
 
@@ -178,8 +178,8 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
     int8_t * AF_FileRowInHex = 0;
     FILE *F_HexadecimalFile = 0;            /* declare the file pointer */
     FILE *F_BinaryFile = 0;
-    
-    
+
+
     uint8_t VP_Num_Bytes = 0;
     uint16_t VP_16bitsAddress = 0;
     uint8_t VF_Type = 0;
@@ -189,35 +189,35 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
     uint16_t VF_AF_FileRowInHexPos = 0;
     uint16_t VF_SegmentedMemoryAddress = 0;
     uint16_t VF_S_BinFilePos = 0;
-    
-    
+
+
     uint32_t VF_A_BinaryDataPos = 0;
-    
+
     Enum_MemoryType E_MemoryType;
     Enum_Errors E_OperationResult = E_InProcess;
-    
+
     uint16_t VP_MemoryBanksCounter = 0;
     uint16_t VP_CurrentBank = 0;
-    
-    
-    
-    
-    
+
+
+
+
+
     F_HexadecimalFile = fopen ((const char *)S_HexFile, "rt");  /* open the file for reading */
     if ( F_HexadecimalFile == NULL)
     {
-        
+
         return E_FileNotFound;
     }
-    
+
     if ( VF_EndianessBits % 8 != 0)
     {
         return E_EndianesIncompatibleBits;
     }
-    
+
     A_DetectedMemoryBanks = (uint32_t*) malloc( 1 * sizeof (uint32_t));
     AF_FileAsciiRow = (int8_t *) malloc (C_LineSize * sizeof (int8_t));
-    
+
     while(fgets((char*)AF_FileAsciiRow, C_LineSize, F_HexadecimalFile) != NULL && E_OperationResult == E_InProcess)
     {
         int16_t VP_TamanoArrayHex = 0;
@@ -248,14 +248,14 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
         AF_FileRowInHex = (int8_t*) malloc ( ((VP_TamanoArrayHex)/2)* sizeof(int8_t));
         if ( AF_FileRowInHex == NULL)
         {
-            
+
             E_OperationResult =  E_MemoryAllocation;
             break;
         }
-        
+
         if ( F_ConvertArrayFromAsciiToNumeric(&AF_FileAsciiRow[1], VP_TamanoArrayHex, AF_FileRowInHex) == 0 )
         {
-            
+
             E_OperationResult = E_IncompatibleFile;
             break;
         }
@@ -264,15 +264,15 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
         VP_16bitsAddress = ((((uint16_t) AF_FileRowInHex[1]) << 8) & 0xFF00) + (((uint16_t) AF_FileRowInHex[2]) & 0xFF);
         VF_Type = AF_FileRowInHex[3];
         VF_AF_FileRowInHexPos = 4;
-        
+
         VF_Checksum = VF_Checksum +  AF_FileRowInHex[0] +  AF_FileRowInHex[1] +  AF_FileRowInHex[2] + AF_FileRowInHex[3] ;
-        
-        
+
+
         switch (VF_Type)
         {
                 //Registro de Datos
             case 0:
-                
+
                 if ( VF_EndianessBits > 0)
                 {
                     uint8_t VF_Resultado =  F_TranformArrayFromLittleEndianToBigEndian(VF_EndianessBits, VP_Num_Bytes, (uint8_t*)&AF_FileRowInHex[4], (uint8_t*)&AF_FileRowInHex[4]);
@@ -280,7 +280,7 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
                     {
                         return VF_Resultado;
                     }
-                    
+
                 }
                 if (E_MemoryType == E_SegmentAddress)
                 {
@@ -290,9 +290,9 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
                 {
                     VF_PhysicalAddress = ((((uint32_t) VF_High_Address) << 16) & 0xFFFF0000) + (((uint32_t) VP_16bitsAddress) & 0xFFFF);
                 }
-                
-                
-                
+
+
+
                 for (VP_CurrentBank = 0; VP_CurrentBank < VP_MemoryBanksCounter; VP_CurrentBank++)
                 {
                     if (A_DetectedMemoryBanks[VP_CurrentBank] == (int)(VF_PhysicalAddress / VF_FileSize))
@@ -303,7 +303,7 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
                 if (VP_CurrentBank == VP_MemoryBanksCounter)
                 {
                     A_DetectedMemoryBanksTmp =  (uint32_t*) realloc ( A_DetectedMemoryBanks, (VP_MemoryBanksCounter + 1) * sizeof (uint32_t));
-                    
+
                     if ( A_DetectedMemoryBanksTmp == NULL )
                     {
                         E_OperationResult =  E_MemoryAllocation;
@@ -313,9 +313,9 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
                     {
                         A_DetectedMemoryBanks = A_DetectedMemoryBanksTmp;
                     }
-                    
+
                     A_DetectedMemoryBanks[VP_MemoryBanksCounter] = (VF_PhysicalAddress / VF_FileSize);
-                    
+
                     if ( A_BinaryData == NULL)
                     {
                         A_BinaryData = (int8_t**) malloc ( 1 * sizeof (int8_t*));
@@ -338,43 +338,43 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
                         E_OperationResult = E_MemoryAllocation;
                         break;
                     }
-                    
+
                     A_BinaryData[(VP_MemoryBanksCounter)] = (int8_t*) malloc ( VF_FileSize * sizeof (int8_t));
-                    
+
                     if ( A_BinaryData[(VP_MemoryBanksCounter)] == NULL)
                     {
                         E_OperationResult = E_MemoryAllocation;
                         break;
                     }
-                    
+
                     //Rellenamos el array con FF por las memor�as Flash
                     for (VF_A_BinaryDataPos = 0; VF_A_BinaryDataPos < VF_FileSize; VF_A_BinaryDataPos++)
                     {
                         A_BinaryData[VP_MemoryBanksCounter][VF_A_BinaryDataPos] = VF_FillPathern;
                     }
                     VP_MemoryBanksCounter++;
-                    
+
                 }
-                
-                
+
+
                 VF_PhysicalAddress = VF_PhysicalAddress % VF_FileSize;
-                
-                
+
+
                 for (VF_A_BinaryDataPos = 0; VF_A_BinaryDataPos < VP_Num_Bytes; VF_A_BinaryDataPos++)
                 {
                     A_BinaryData[VP_CurrentBank][VF_PhysicalAddress++] = AF_FileRowInHex[VF_AF_FileRowInHexPos];
                     VF_Checksum = (VF_Checksum + AF_FileRowInHex[VF_AF_FileRowInHexPos++]);
                 }
-                
+
                 if (VF_Checksum != 0)
                 {
-                    
+
                     E_OperationResult = E_CheckSum;
                     break;
                 }
-                
+
                 break;
-                
+
                 //Fin de fichero
             case 1:
                 if ( VF_Checksum != 0)
@@ -387,7 +387,7 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
                 }
                 E_OperationResult = E_OK;
                 break;
-                
+
                 //Zona de memoria de segmento extendido, permite hasta 1Mb de memoria
             case 2:
                 E_MemoryType = E_SegmentAddress;
@@ -399,16 +399,16 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
                     break;
                 }
                 break;
-                
+
             case 3:
                 break;
                 //Zona de memoria lineal extendida, permite hasta 4GiB
             case 4:
                 E_MemoryType = E_LinearAddress;
                 VF_High_Address = ((((uint16_t) AF_FileRowInHex[VF_AF_FileRowInHexPos]) << 8) & 0xFF00) + (((uint16_t) AF_FileRowInHex[VF_AF_FileRowInHexPos + 1]) & 0xFF);
-                
+
                 VF_Checksum = (AF_FileRowInHex[VF_AF_FileRowInHexPos + 1] + AF_FileRowInHex[VF_AF_FileRowInHexPos] + VF_Checksum);
-                
+
                 if (VF_Checksum != 0)
                 {
                     E_OperationResult = E_CheckSum;
@@ -422,7 +422,7 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
         }
         free(AF_FileRowInHex);
     }
-    
+
     fclose(F_HexadecimalFile);
     free(AF_FileAsciiRow);
     if ( E_OperationResult != E_OK)
@@ -435,8 +435,8 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
         free(A_DetectedMemoryBanks);
         return E_OperationResult;
     }
-    
-    
+
+
     VF_S_BinFilePos = strlen((const char*)S_BinFile);
     while ( VF_S_BinFilePos > 0 )
     {
@@ -446,7 +446,7 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
         }
         VF_S_BinFilePos--;
     }
-    
+
     for (VP_CurrentBank = 0; VP_CurrentBank < VP_MemoryBanksCounter; VP_CurrentBank++)
     {
         if ( VF_MemoryInitAddress / VF_FileSize == A_DetectedMemoryBanks[VP_CurrentBank])
@@ -461,17 +461,17 @@ int8_t F_TransformHexIntelFileToBin(const int8_t S_HexFile[], uint32_t VF_FileSi
         fwrite (A_BinaryData[VP_CurrentBank] , sizeof(int8_t), VF_FileSize, F_BinaryFile);
         fclose (F_BinaryFile);
     }
-    
+
     for (VP_CurrentBank = 0; VP_CurrentBank < VP_MemoryBanksCounter; VP_CurrentBank++)
     {
         free(A_BinaryData[VP_CurrentBank]);
     }
     free(A_BinaryData);
     free(A_DetectedMemoryBanks);
-    
+
     //return "OK";
     return E_OperationResult;
-    
+
 }
 
 
@@ -480,40 +480,40 @@ uint16_t crc16(uint16_t crc, uint8_t val)
 {
     const uint16_t poly = 0x1021;
     uint8_t cnt;
-    
+
     for(cnt = 0; cnt < 8; cnt++, val <<= 1)
     {
         uint8_t msb = (crc & 0x8000) ? 1 : 0;
-        
+
         crc <<= 1;
-        
+
         if(val & 0x80)
         {
             crc |= 0x0001;
         }
-        
+
         if(msb)
         {
             crc ^= poly;
         }
     }
-    
+
     return(crc);
 }
 
 
 ImageMetadata calcmeta(const char *S_BinFile) {
     long int startAddress = 0x1000;
-    
+
     // open binary file
     FILE *fp = fopen(S_BinFile, "rb");
     //FILE *fp = fopen("/Users/mikalai/Downloads/CC2640_AppStack-1.hex.bin", "rb");
-    
+
     // obtain file size:
     fseek (fp , 0 , SEEK_END);
     long int binFileSize = ftell (fp);
     rewind (fp);
-    
+
     // read binary file into buffer
     int8_t *bin = malloc(sizeof(int8_t) * binFileSize);
     if (fread (bin, 1, binFileSize, fp) != binFileSize)
@@ -521,9 +521,9 @@ ImageMetadata calcmeta(const char *S_BinFile) {
         fputs ("Error reading binary file\r\n", stderr);
         exit (3);
     }
-    
+
     long int i;
-    
+
     // calculate end address
     long int endAddress = binFileSize - 1;
     for(i = endAddress; i >= startAddress; i--)
@@ -534,10 +534,10 @@ ImageMetadata calcmeta(const char *S_BinFile) {
             break;
         }
     }
-    
+
     // round up end address so result length is multiple of 4
     endAddress |= 0x3;
-    
+
     // calculate crc
     uint16_t crc = 0;
     for (i = startAddress; i <= endAddress; i ++) {
@@ -545,14 +545,14 @@ ImageMetadata calcmeta(const char *S_BinFile) {
     }
     crc = crc16(crc, 0);
     crc = crc16(crc, 0);
-    
+
     // create metadata structure
     long int length = (endAddress - startAddress + 1);
     ImageMetadata metadata = {0};
     metadata.crc = crc;
-    metadata.major = 0x01;
-    metadata.minor = 0x02;
-    metadata.patch = 0x03;
+    metadata.major = 0x00;
+    metadata.minor = 0x00;
+    metadata.patch = 0x00;
     metadata.imageType = 0x01;
     metadata.startAddress1 = startAddress & 0xFF;
     metadata.startAddress2 = startAddress >> 8 & 0xFF;
@@ -560,10 +560,10 @@ ImageMetadata calcmeta(const char *S_BinFile) {
     metadata.length1 = length & 0xFF;
     metadata.length2 = length >> 8 & 0xFF;
     metadata.length3 = length >> 16 & 0xFF;
-    
+
     free(bin);
     fclose(fp);
-    
+
     return metadata;
 }
 
@@ -578,16 +578,17 @@ int main(int argc, const char * argv[]) {
     uint32_t VP_MemorySize = C_BinaryFileSize*1024;
     uint8_t VP_FillPathern = 0xFF;
     uint8_t VP_EndianessBits = 0;
-    
+
     if ( argc <= 1 )
     {
-        
+
         fprintf (stderr,
                  "\n"
+                 "Version: 1.0.1 \n"
                  "Usage: hex2bin.exe filename.hex filename.bin [OPTIONS] \n"
                  "Example: hex2bin.exe myhex.hex mybin.bin /A:1FF /F:FF /S:256 \n"
                  "Options:\n"
-                 "  /S [Size]  Size in kB of the .bin file, decimal value. Default value: 128\n"
+                 "  /S [Size]  Size in kB of the .bin file, decimal value. Default value: 256\n"
                  "  /F [Fill]  Fill pattern. Default value FF\n"
                  "  /A [start Address] Starting Address of the memory, hexadecimal value. Default value 0\n"
                  "  /L [Little Endian] If the data in the hex file is written in little endian you should include this parameter "
@@ -602,9 +603,9 @@ int main(int argc, const char * argv[]) {
                  "Memory Allocation = -4 \n"
                  "Endianness Bits must be 8 multiple = -5 \n"
                  );
-        
-        
-        
+
+
+
         return 0;
     }
     //getchar();
@@ -612,7 +613,7 @@ int main(int argc, const char * argv[]) {
     S_BinFile = (int8_t *) malloc ((strlen(argv[0]) + strlen(argv[2]) + 20) * sizeof (int8_t));
     strcpy((char*)S_HexFile, argv[0]);
     strcpy((char*)S_BinFile, argv[0]);
-    
+
     VF_ArrayPos = strlen((const char*)S_HexFile);
     while ( VF_ArrayPos > 0 )
     {
@@ -626,10 +627,10 @@ int main(int argc, const char * argv[]) {
     {
         VF_ArrayPos++;
     }
-    
+
     strcpy((char*)&S_HexFile[VF_ArrayPos], argv[1]);
     strcpy((char*)&S_BinFile[VF_ArrayPos], argv[2]);
-    
+
     for (VP_argbPos = 3; VP_argbPos < argc; VP_argbPos++)
     {
         if (argv[VP_argbPos][1] == 'A' && argv[VP_argbPos][2] == ':')
@@ -643,7 +644,7 @@ int main(int argc, const char * argv[]) {
         {
             VP_MemorySize = atoi(&argv[VP_argbPos][3]) * 1024;
         }
-        
+
         if (argv[VP_argbPos][1] == 'F' && argv[VP_argbPos][2] == ':')
         {
             VP_FillPathern  = 0;
@@ -652,27 +653,27 @@ int main(int argc, const char * argv[]) {
                 VP_FillPathern = (VP_FillPathern << 4) + F_ConvertAsciiToNumeric(argv[VP_argbPos][VF_ArrayPos + 3]);
             }
         }
-        
+
         if (argv[VP_argbPos][1] == 'L' && argv[VP_argbPos][2] == ':')
         {
             VP_EndianessBits = atoi(&argv[VP_argbPos][3]);
         }
     }
-    
-    int8_t result = F_TransformHexIntelFileToBin(S_HexFile, VP_MemorySize, S_BinFile, VP_FillPathern, VP_MemoryInitAddress, VP_EndianessBits);
-    
 
-    
-    
+    int8_t result = F_TransformHexIntelFileToBin(S_HexFile, VP_MemorySize, S_BinFile, VP_FillPathern, VP_MemoryInitAddress, VP_EndianessBits);
+
+
+
+
     if (result != E_OK) {
         printf("Result: %d\r\n", result);
         free(S_HexFile);
         free(S_BinFile);
         return 1;
     }
-    
+
     //printf("Generated binary image\r\n");
-    
+
     // calculate metadata
     ImageMetadata metadata = calcmeta((const char *)S_BinFile);
     PRINT_OPAQUE_STRUCT(&metadata);
