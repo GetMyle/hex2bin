@@ -89,7 +89,7 @@ typedef struct __attribute__((packed)) {
 
 void print_mem(void const *vp, size_t n)
 {
-    unsigned char const *p = vp;
+    unsigned char const *p = (unsigned char const*)vp;
     size_t i;
     for (i=0; i<n; i++) {
         printf("%02x", p[i]);
@@ -515,7 +515,7 @@ ImageMetadata calcmeta(const char *S_BinFile) {
     rewind (fp);
 
     // read binary file into buffer
-    int8_t *bin = malloc(sizeof(int8_t) * binFileSize);
+    int8_t *bin = (int8_t*)malloc(sizeof(int8_t) * binFileSize);
     if (fread (bin, 1, binFileSize, fp) != binFileSize)
     {
         fputs ("Error reading binary file\r\n", stderr);
@@ -609,6 +609,13 @@ int main(int argc, const char * argv[]) {
         return 0;
     }
     //getchar();
+    if ( argc <= 2 ){
+        fprintf (stderr,
+                 "\n"
+                 "too less arguments\n"
+        );
+        return 0;
+    }
     S_HexFile = (int8_t *) malloc ((strlen(argv[0]) + strlen(argv[1])) * sizeof (int8_t));
     S_BinFile = (int8_t *) malloc ((strlen(argv[0]) + strlen(argv[2]) + 20) * sizeof (int8_t));
     strcpy((char*)S_HexFile, argv[0]);
