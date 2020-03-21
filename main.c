@@ -609,6 +609,13 @@ int main(int argc, const char * argv[]) {
         return 0;
     }
     //getchar();
+    if ( argc <= 2 ){
+        fprintf (stderr,
+                 "\n"
+                 "too less arguments\n"
+        );
+        return 0;
+    }
     S_HexFile = (int8_t *) malloc ((strlen(argv[0]) + strlen(argv[1])) * sizeof (int8_t));
     S_BinFile = (int8_t *) malloc ((strlen(argv[0]) + strlen(argv[2]) + 20) * sizeof (int8_t));
     strcpy((char*)S_HexFile, argv[0]);
